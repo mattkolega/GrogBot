@@ -27,11 +27,16 @@ async def hello(ctx):
 async def randomquote(ctx):
     channel = discord.utils.get(bot.get_all_channels(), name="quotes")
     messages = [message async for message in channel.history(limit=500)]
+    
     randomIndex = random.randrange(0, len(messages))
+    randomQuote = messages[randomIndex]
 
     embed = discord.Embed(title="Random Quote")
-    embed.description = messages[randomIndex].content
-    embed.url = messages[randomIndex].jump_url
+    embed.description = randomQuote.content
+    embed.url = randomQuote.jump_url
+
+    if len(randomQuote.attachments) > 0:
+            embed.set_image(url=randomQuote.attachments[0].url)
 
     await ctx.send(embed=embed)
 
