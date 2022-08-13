@@ -72,6 +72,9 @@ async def quoteofthemonth(ctx):
         embed.description = quote.content
         embed.url = quote.jump_url
 
+        if len(quote.attachments) > 0:
+            embed.set_image(url=quote.attachments[0].url)
+
         await ctx.send(embed=embed)
 
 def getTotalReactionCount(message: discord.Message):
