@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from os import environ
+import datetime
 import random
 
 load_dotenv()
@@ -33,6 +34,45 @@ async def randomquote(ctx):
     embed.url = messages[randomIndex].jump_url
 
     await ctx.send(embed=embed)
+
+@bot.command()
+async def quoteofthemonth(ctx):
+    channel = discord.utils.get(bot.get_all_channels(), name="quotes")
+    messages = []
+
+    today = datetime.datetime.now()
+    beforeDate = datetime.datetime(2022, today.month, 1, hour=0, minute=0, second=0)
+    afterDate = datetime.datetime(2022, today.month-1, 1, hour=0, minute=0, second=0)
+
+    async for message in channel.history(before=beforeDate, after=afterDate):
+        if len(message.reactions) > 0: 
+            messages.append(message)
+
+    if len(messages) == 0:
+        await ctx.send("I couldn't find a quote of the month")
+        return
+
+    quoteofthemonth = []
+    quoteofthemonth.append(messages[0])
+
+    for message in messages:
+        if message == quoteofthemonth [0]:
+            continue
+        if len(message.reactions) > len(quoteofthemonth[0].reactions):
+            quoteofthemonth = []
+            quoteofthemonth.append(message)
+        elif len(message.reactions) == len(quoteofthemonth[0].reactions):
+            quoteofthemonth.append(message)
+    
+    if len(quoteofthemonth) > 1:
+        await ctx.send("There are multiple Quotes of the Month!")
+
+    for quote in quoteofthemonth:
+        embed = discord.Embed(title="Quote of the Month")
+        embed.description = quote.content
+        embed.url = quote.jump_url
+
+        await ctx.send(embed=embed)
 
 @bot.command()
 async def grogsongs(ctx):
