@@ -56,12 +56,12 @@ async def quoteofthemonth(ctx):
     quoteofthemonth.append(messages[0])
 
     for message in messages:
-        if message == quoteofthemonth [0]:
+        if message == quoteofthemonth[0]:
             continue
-        if len(message.reactions) > len(quoteofthemonth[0].reactions):
+        if getTotalReactionCount(message) > getTotalReactionCount(quoteofthemonth[0]):
             quoteofthemonth = []
             quoteofthemonth.append(message)
-        elif len(message.reactions) == len(quoteofthemonth[0].reactions):
+        elif getTotalReactionCount(message) == getTotalReactionCount(quoteofthemonth[0]):
             quoteofthemonth.append(message)
     
     if len(quoteofthemonth) > 1:
@@ -73,6 +73,15 @@ async def quoteofthemonth(ctx):
         embed.url = quote.jump_url
 
         await ctx.send(embed=embed)
+
+def getTotalReactionCount(message: discord.Message):
+    messageReactions = message.reactions
+    totalReactionCount = 0
+
+    for reaction in messageReactions:
+        totalReactionCount += reaction.count
+    
+    return totalReactionCount
 
 @bot.command()
 async def grogsongs(ctx):
