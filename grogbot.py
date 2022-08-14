@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+import requests
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from os import environ
 import datetime
@@ -94,5 +96,18 @@ def getTotalReactionCount(message: discord.Message):
 @bot.command()
 async def grogsongs(ctx):
     await ctx.send(PLAYLIST)
+
+@bot.command()
+async def urbandictionary(ctx, arg):
+    word = arg
+    request = requests.get("https://www.urbandictionary.com/define.php?term={}".format(word))
+
+    soup = BeautifulSoup(request.content, features="html.parser")
+
+    embed = discord.Embed(title=word)
+    embed.description = soup.find("div",attrs={"class":"meaning"}).text
+    embed.url = request.url
+
+    await ctx.send(embed=embed)
 
 bot.run(TOKEN)
