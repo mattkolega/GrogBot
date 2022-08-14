@@ -19,14 +19,17 @@ bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get o
 
 @bot.event
 async def on_ready():
+    """Executes when the bot has finished starting up"""
     print("We have logged in as {0.user}".format(bot))
 
 @bot.command()
 async def hello(ctx):
+    """Responds to the user"""
     await ctx.send("G'day!")
 
 @bot.command()
 async def randomquote(ctx):
+    """Grabs a random quote from the quotes channel"""
     channel = discord.utils.get(bot.get_all_channels(), name="quotes")
     messages = [message async for message in channel.history(limit=500)]
     
@@ -44,6 +47,7 @@ async def randomquote(ctx):
 
 @bot.command()
 async def quoteofthemonth(ctx):
+    """Displays the quote with the highest reaction count from the previous month"""
     channel = discord.utils.get(bot.get_all_channels(), name="quotes")
     messages = []
 
@@ -85,6 +89,7 @@ async def quoteofthemonth(ctx):
         await ctx.send(embed=embed)
 
 def getTotalReactionCount(message: discord.Message):
+    """Calculates the total number of reactions for a message"""
     messageReactions = message.reactions
     totalReactionCount = 0
 
@@ -95,10 +100,12 @@ def getTotalReactionCount(message: discord.Message):
 
 @bot.command()
 async def grogsongs(ctx):
+    """Sends playlist link containing party songs"""
     await ctx.send(PLAYLIST)
 
 @bot.command()
-async def urbandictionary(ctx, arg):
+async def urbandictionary(ctx, arg: str):
+    """Displays the urban dictionary meaning for a word """
     word = arg
     request = requests.get("https://www.urbandictionary.com/define.php?term={}".format(word))
 
