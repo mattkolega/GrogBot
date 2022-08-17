@@ -68,9 +68,10 @@ async def quoteofthemonth(ctx):
 
     for message in messages:
         if message == quoteofthemonth[0]:
+            # Skip to the next item in the messages list to avoid duplicate copy of the first message
             continue
         if getTotalReactionCount(message) > getTotalReactionCount(quoteofthemonth[0]):
-            quoteofthemonth = []
+            quoteofthemonth.clear()
             quoteofthemonth.append(message)
         elif getTotalReactionCount(message) == getTotalReactionCount(quoteofthemonth[0]):
             quoteofthemonth.append(message)
@@ -88,7 +89,7 @@ async def quoteofthemonth(ctx):
 
         await ctx.send(embed=embed)
 
-def getTotalReactionCount(message: discord.Message):
+def getTotalReactionCount(message: discord.Message) -> int:
     """Calculates the total number of reactions for a message"""
     messageReactions = message.reactions
     totalReactionCount = 0
@@ -104,14 +105,14 @@ async def grogsongs(ctx):
     await ctx.send(PLAYLIST)
 
 @bot.command()
-async def urbandictionary(ctx, arg: str):
-    """Displays the urban dictionary meaning for a word """
-    word = arg
-    request = requests.get("https://www.urbandictionary.com/define.php?term={}".format(word))
+async def urbandictionary(ctx, *args):
+    """Displays the urban dictionary meaning for a word"""
+    searchQuery = (" ".join(args))
+    request = requests.get("https://www.urbandictionary.com/define.php?term={}".format(searchQuery))
 
     soup = BeautifulSoup(request.content, features="html.parser")
 
-    embed = discord.Embed(title=word)
+    embed = discord.Embed(title=searchQuery)
     embed.description = soup.find("div",attrs={"class":"meaning"}).text
     embed.url = request.url
 
