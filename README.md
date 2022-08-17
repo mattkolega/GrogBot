@@ -1,6 +1,6 @@
 # GrogBot
  
-A simple bot for my discord server. Contains a couple of fun commands.
+A simple bot for my discord server. Contains a couple of fun commands. Supports deployment to heroku.
 
 ## Installation
 
