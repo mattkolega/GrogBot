@@ -1,9 +1,10 @@
 import discord
 from discord.ext import commands
-import requests
-from bs4 import BeautifulSoup
+
 from dotenv import load_dotenv
 from os import environ
+
+import asyncio
 import datetime
 import random
 
@@ -16,6 +17,10 @@ intents = discord.Intents.all()
 
 bot = commands.Bot(command_prefix="$", description=description, intents=intents)
 bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get on the Beers")
+
+initialExtensions = [
+    "cogs.fun"
+]   
 
 @bot.event
 async def on_ready():
@@ -104,18 +109,13 @@ async def grogsongs(ctx):
     """Sends playlist link containing party songs"""
     await ctx.send(PLAYLIST)
 
-@bot.command()
-async def urbandictionary(ctx, *args):
-    """Displays the urban dictionary meaning for a word"""
-    searchQuery = (" ".join(args))
-    request = requests.get("https://www.urbandictionary.com/define.php?term={}".format(searchQuery))
+async def loadExtensions():
+    for extension in initialExtensions:
+        await bot.load_extension(extension)
 
-    soup = BeautifulSoup(request.content, features="html.parser")
+async def main():
+    async with bot:
+        await loadExtensions()
+        await bot.start(TOKEN)
 
-    embed = discord.Embed(title=searchQuery)
-    embed.description = soup.find("div",attrs={"class":"meaning"}).text
-    embed.url = request.url
-
-    await ctx.send(embed=embed)
-
-bot.run(TOKEN)
+asyncio.run(main())
