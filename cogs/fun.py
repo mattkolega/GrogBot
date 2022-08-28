@@ -48,7 +48,7 @@ class Fun(commands.Cog):
     async def urbandictionary(self, ctx, *args):
         """Displays the urban dictionary meaning for a word"""
         searchQuery = (" ".join(args))
-        request = requests.get("https://www.urbandictionary.com/define.php?term={}".format(searchQuery))
+        request = requests.get(f"https://www.urbandictionary.com/define.php?term={searchQuery}")
 
         soup = BeautifulSoup(request.content, features="html.parser")
 

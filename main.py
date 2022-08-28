@@ -5,8 +5,6 @@ from dotenv import load_dotenv
 from os import environ
 
 import asyncio
-import datetime
-import random
 
 load_dotenv()
 TOKEN = environ["BOT_TOKEN"]
@@ -21,12 +19,16 @@ bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get o
 initialExtensions = [
     "cogs.fun",
     "cogs.quote"
-]   
+]
+
+async def loadExtensions():
+    for extension in initialExtensions:
+        await bot.load_extension(extension)
 
 @bot.event
 async def on_ready():
     """Executes when the bot has finished starting up"""
-    print("We have logged in as {0.user}".format(bot))
+    print(f"We have logged in as {bot.user}")
 
 @bot.command()
 async def hello(ctx):
@@ -37,10 +39,6 @@ async def hello(ctx):
 async def grogsongs(ctx):
     """Sends playlist link containing party songs"""
     await ctx.send(PLAYLIST)
-
-async def loadExtensions():
-    for extension in initialExtensions:
-        await bot.load_extension(extension)
 
 async def main():
     async with bot:
