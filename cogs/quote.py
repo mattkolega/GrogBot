@@ -18,8 +18,7 @@ class Quote(commands.Cog):
         channel = discord.utils.get(self.bot.get_all_channels(), name="quotes")
         messages = [message async for message in channel.history(limit=500)]
         
-        randomIndex = random.randrange(0, len(messages))
-        randomQuote = messages[randomIndex]
+        randomQuote = random.choice(messages)
 
         embed = discord.Embed(title="Random Quote")
         embed.description = randomQuote.content
