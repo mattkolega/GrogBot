@@ -24,6 +24,7 @@ class Quote(commands.Cog):
         embed = discord.Embed(title="Random Quote")
         embed.description = randomQuote.content
         embed.url = randomQuote.jump_url
+        embed.timestamp = randomQuote.created_at
 
         if len(randomQuote.attachments) > 0:
                 embed.set_image(url=randomQuote.attachments[0].url)
@@ -68,6 +69,7 @@ class Quote(commands.Cog):
             embed = discord.Embed(title="Quote of the Month")
             embed.description = quote.content
             embed.url = quote.jump_url
+            embed.timestamp = quote.created_at
 
             if len(quote.attachments) > 0:
                 embed.set_image(url=quote.attachments[0].url)
