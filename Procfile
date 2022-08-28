@@ -1,1 +1,1 @@
-worker: python3 grogbot.py
+worker: python3 main.py
