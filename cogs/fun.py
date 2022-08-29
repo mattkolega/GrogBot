@@ -14,7 +14,12 @@ class Fun(commands.Cog):
         print("Fun cog has successfully loaded")
 
     @commands.command()
-    async def magic8ball(self, ctx, arg):
+    async def magic8ball(self, ctx, *, args=None):
+        """Get life advice"""
+        if args == None:
+            await ctx.send("Command failed. A question is required!")
+            return
+
         possibleAnswers = [
             "It is certain",
             "It is decidedly so.",
