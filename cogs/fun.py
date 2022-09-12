@@ -2,7 +2,8 @@ import discord
 from discord.ext import commands
 
 import random
-import requests
+
+import aiohttp
 from bs4 import BeautifulSoup
 
 class Fun(commands.Cog):
@@ -53,15 +54,24 @@ class Fun(commands.Cog):
     async def urbandictionary(self, ctx, *args):
         """Displays the urban dictionary meaning for a word"""
         searchQuery = (" ".join(args))
-        request = requests.get(f"https://www.urbandictionary.com/define.php?term={searchQuery}")
 
-        soup = BeautifulSoup(request.content, features="html.parser")
+        url = f"https://www.urbandictionary.com/define.php?term={searchQuery}"
 
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as request:
+                if request.status == 200:
+                    definition = await self.bot.loop.run_in_executor(None, self.scrape, await request.text())
+                
         embed = discord.Embed(title=searchQuery)
-        embed.description = soup.find("div",attrs={"class":"meaning"}).text
-        embed.url = request.url
-
+        embed.description = definition
+        embed.url = url
+        
         await ctx.send(embed=embed)
+
+    def scrape(self, html):
+        soup = BeautifulSoup(html, features="html.parser")
+        content = soup.find("div",attrs={"class":"meaning"}).text
+        return content
 
 async def setup(bot):
     await bot.add_cog(Fun(bot))
