@@ -6,6 +6,8 @@ from os import environ
 
 import asyncio
 
+discord.utils.setup_logging()
+
 load_dotenv()
 TOKEN = environ["BOT_TOKEN"]
 PLAYLIST = environ["PLAYLIST_URL"]
@@ -18,7 +20,8 @@ bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get o
 
 initialExtensions = [
     "cogs.fun",
-    "cogs.quote"
+    "cogs.quote",
+    "cogs.music"
 ]
 
 async def loadExtensions():
