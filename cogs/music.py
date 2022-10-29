@@ -36,6 +36,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         self.title = data.get('title')
         self.url = data.get('url')
+        self.thumbnail = data.get('thumbnail')
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False):
@@ -75,20 +76,27 @@ class Music(commands.Cog):
         await channel.connect()
     
     @commands.command()
-    async def yt(self, ctx, *, url):
+    async def play(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
 
         async with ctx.typing():
             player = await YTDLSource.from_url(url, loop=self.bot.loop, stream=True)
             ctx.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
 
-        await ctx.send(f'Now playing: {player.title}')
+        embed = discord.Embed(title="Now Playing")
+        embed.colour = 0x00ffe3
+        embed.description = (f'[{player.title}]({player.url})')
+        embed.set_thumbnail(url=player.thumbnail)
+
+        embed.set_footer(text=f"Requested by {ctx.message.author.nick}",icon_url=ctx.message.author.avatar.url)
+
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def leavevoice(self, ctx):
         await ctx.voice_client.disconnect()
 
-    @yt.before_invoke
+    @play.before_invoke
     async def ensure_voice(self, ctx):
         if ctx.voice_client is None:
             if ctx.author.voice:
