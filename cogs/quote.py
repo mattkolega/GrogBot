@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import datetime
 import random
+from zoneinfo import ZoneInfo
 
 class Quote(commands.Cog):
     def __init__(self, bot):
@@ -36,12 +37,15 @@ class Quote(commands.Cog):
         channel = discord.utils.get(self.bot.get_all_channels(), name="quotes")
         messages = []
 
-        today = datetime.datetime.now()
-        beforeDate = datetime.datetime(2022, today.month, 1, hour=0, minute=0, second=0)
-        afterDate = datetime.datetime(2022, today.month-1, 1, hour=0, minute=0, second=0)
+        todayutc = datetime.datetime.now()
+        localtz = ZoneInfo("Australia/Sydney")
+        todaylocal = todayutc.astimezone(localtz) # Convert current UTC time to local time
+
+        beforeDate = datetime.datetime(2022, todaylocal.month, 1, hour=0, minute=0, second=0)
+        afterDate = datetime.datetime(2022, todaylocal.month-1, 1, hour=0, minute=0, second=0)
 
         async for message in channel.history(before=beforeDate, after=afterDate):
-            if len(message.reactions) > 0: 
+            if len(message.reactions) > 0: # Only get messages with reactions
                 messages.append(message)
 
         if len(messages) == 0:
