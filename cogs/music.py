@@ -83,13 +83,18 @@ class Music(commands.Cog):
             player = await YTDLSource.from_url(url, loop=self.bot.loop, stream=True)
             ctx.voice_client.play(player, after=lambda e: print(f'Player error: {e}') if e else None)
 
-        embed = discord.Embed(title="Now Playing")
+        await ctx.send("https://tenor.com/view/pelado-re-loco-ruso-crazy-dance-party-drunk-gif-16831286") # Send party gif
+
+        embed = discord.Embed(title="Now Playing :headphones:")
         embed.colour = 0x00ffe3
         embed.description = (f'[{player.title}]({player.url})')
         embed.set_thumbnail(url=player.thumbnail)
 
-        embed.set_footer(text=f"Requested by {ctx.message.author.nick}",icon_url=ctx.message.author.avatar.url)
-
+        if ctx.message.author.nick:
+            embed.set_footer(text=f"Requested by {ctx.message.author.nick}",icon_url=ctx.message.author.avatar.url)
+        else:
+            embed.set_footer(text=f"Requested by {ctx.message.author.name}",icon_url=ctx.message.author.avatar.url)
+        
         await ctx.send(embed=embed)
 
     @commands.command()
