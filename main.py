@@ -19,9 +19,10 @@ bot = commands.Bot(command_prefix="$", description=description, intents=intents)
 bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get on the Beers")
 
 initialExtensions = [
+    "cogs.anime",
     "cogs.fun",
+    "cogs.music",
     "cogs.quote",
-    "cogs.music"
 ]
 
 async def loadExtensions():
