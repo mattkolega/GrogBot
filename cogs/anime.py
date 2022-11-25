@@ -52,19 +52,28 @@ class Anime(commands.Cog):
                     animeData = await request.json()
 
                     embed = discord.Embed()
-                    embed.title = animeData["data"]["Media"]["title"]["english"]
+
+                    title = animeData["data"]["Media"]["title"]["english"]
+
+                    if title == None:
+                        title = animeData["data"]["Media"]["title"]["romaji"]
+
+                    embed.title = title
                     embed.url = animeData["data"]["Media"]["siteUrl"]
 
                     description = animeData["data"]["Media"]["description"]
-                    
-                    escapeSequences = ''.join(chr(char) for char in range(1, 32))
-                    translator = str.maketrans('', '', escapeSequences)
-                    description = description.translate(translator)  # Remove escape sequences from description string
-                    description = markdownify.markdownify(description)  # Convert HTML tags to markdown
 
-                    embed.description = description
+                    if description != None:
+                        escapeSequences = ''.join(chr(char) for char in range(1, 32))
+                        translator = str.maketrans('', '', escapeSequences)
+                        description = description.translate(translator)  # Remove escape sequences from description string
+                        description = markdownify.markdownify(description)  # Convert HTML tags to markdown
+                        embed.description = description
 
-                    embed.set_thumbnail(url=animeData["data"]["Media"]["coverImage"]["large"])
+                    thumbnail = animeData["data"]["Media"]["coverImage"]["large"]
+
+                    if thumbnail != None:
+                        embed.set_thumbnail(url=thumbnail) 
 
                     color = animeData["data"]["Media"]["coverImage"]["color"]
 
@@ -72,24 +81,62 @@ class Anime(commands.Cog):
                         color = color.replace("#", "")
                         embed.color = int(color, 16)  # Convert string to hex code
 
+                    # -- Status Field --
+
                     embed.add_field(name="Status", value=animeData["data"]["Media"]["status"], inline=True)
-                    embed.add_field(name="Episodes", value=animeData["data"]["Media"]["episodes"], inline=True)
 
-                    duration = str(animeData["data"]["Media"]["duration"])
+                    # -- Episodes Field --
 
-                    if int(duration) == 1:
-                        duration += " min"
+                    episodes = animeData["data"]["Media"]["episodes"]
+
+                    if episodes == None:
+                        episodes = "n/a"
+
+                    embed.add_field(name="Episodes", value=episodes, inline=True)
+
+                    # -- Duration Field --
+
+                    duration = animeData["data"]["Media"]["duration"]
+
+                    if duration == None:
+                        duration = "n/a"
                     else:
-                        duration += " mins"
+                        if duration == 1:
+                            duration = str(duration) + " min"
+                        else:
+                            duration = str(duration) + " mins"
 
                     embed.add_field(name="Duration", value=duration, inline=True)
 
-                    embed.add_field(name="Format", value=animeData["data"]["Media"]["format"])
+                    # -- Format Field --
 
-                    genres = ', '.join(str(genre) for genre in animeData["data"]["Media"]["genres"])  # Join list into single string
+                    format = animeData["data"]["Media"]["format"]
+
+                    if format == None:
+                        format = "n/a"
+                    
+                    embed.add_field(name="Format", value=format, inline=True)
+
+                    # -- Genres Field --
+
+                    genres = animeData["data"]["Media"]["genres"]
+
+                    if not genres:
+                        genres = "n/a"
+                    else:
+                        genres = ', '.join(str(genre) for genre in genres)  # Join list into single string
+                    
                     embed.add_field(name="Genres", value=genres, inline=True)
 
-                    embed.add_field(name="Average User Score", value=animeData["data"]["Media"]["averageScore"], inline=True)
+                    # -- Average User Score Field --
+
+                    averageScore = animeData["data"]["Media"]["averageScore"]
+
+                    if averageScore == None:
+                        averageScore = "n/a"
+
+                    embed.add_field(name="Average User Score", value=averageScore, inline=True)
+
 
                     await ctx.send(embed=embed)
 
@@ -188,7 +235,7 @@ class Anime(commands.Cog):
                     if averageScore == None:
                         averageScore = "n/a"
 
-                    embed.add_field(name="Average User Score", value=averageScore, inline=True)    
+                    embed.add_field(name="Average User Score", value=averageScore, inline=True)
 
                     # -- Chapters Field --         
                     
@@ -215,7 +262,7 @@ class Anime(commands.Cog):
                     if not genres:
                         genres = "n/a"
                     else:
-                        genres = ', '.join(str(genre) for genre in mangaData["data"]["Media"]["genres"])  # Join list into single string
+                        genres = ', '.join(str(genre) for genre in genres)  # Join list into single string
                     
                     embed.add_field(name="Genres", value=genres, inline=True)
 
