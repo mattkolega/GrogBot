@@ -102,7 +102,131 @@ class Anime(commands.Cog):
     @commands.command(aliases=["ms"])
     async def mangasearch(self, ctx, *args):
         """Search for a manga in the AniList database"""
-        pass
+        query = """
+        query ($search: String) {
+            Media (search: $search, type: MANGA) {
+                title {
+                    english
+                    romaji
+                }
+                format
+                status
+                description
+                chapters
+                volumes
+                averageScore
+                coverImage {
+                    large
+                    color
+                }
+                genres
+                siteUrl
+            }
+        }
+        """
+
+        searchQuery = (" ".join(args))
+
+        queryVariables = {
+            "search": searchQuery
+        }
+
+        url = "https://graphql.anilist.co"
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json={"query": query, "variables": queryVariables}) as request:
+                if request.status == 200:
+                    mangaData = await request.json()
+
+                    embed = discord.Embed()
+
+                    title = mangaData["data"]["Media"]["title"]["english"]
+
+                    if title == None:
+                        title = mangaData["data"]["Media"]["title"]["romaji"]
+
+                    embed.title = title
+                    embed.url = mangaData["data"]["Media"]["siteUrl"]
+
+                    description = mangaData["data"]["Media"]["description"]
+
+                    if description != None:
+                        escapeSequences = ''.join(chr(char) for char in range(1, 32))
+                        translator = str.maketrans('', '', escapeSequences)
+                        description = description.translate(translator)  # Remove escape sequences from description string
+                        description = markdownify.markdownify(description)  # Convert HTML tags to markdown
+                        embed.description = description
+
+                    thumbnail = mangaData["data"]["Media"]["coverImage"]["large"]
+
+                    if thumbnail != None:
+                        embed.set_thumbnail(url=thumbnail) 
+
+                    color = mangaData["data"]["Media"]["coverImage"]["color"]
+
+                    if color != None:
+                        color = color.replace("#", "")
+                        embed.color = int(color, 16)  # Convert string to hex code
+
+                    # -- Status Field --
+
+                    embed.add_field(name="Status", value=mangaData["data"]["Media"]["status"], inline=True)
+
+                    # -- Format Field
+
+                    format = mangaData["data"]["Media"]["format"]
+
+                    if format == None:
+                        format = "n/a"
+                    
+                    embed.add_field(name="Format", value=format, inline=True)
+
+                    # -- Average User Score Field -- 
+
+                    averageScore = mangaData["data"]["Media"]["averageScore"]
+
+                    if averageScore == None:
+                        averageScore = "n/a"
+
+                    embed.add_field(name="Average User Score", value=averageScore, inline=True)    
+
+                    # -- Chapters Field --         
+                    
+                    chapters = mangaData["data"]["Media"]["chapters"]
+
+                    if chapters == None:
+                        chapters = "n/a"
+
+                    embed.add_field(name="Chapters", value=chapters)
+
+                    # -- Volumes Field --
+
+                    volumes = mangaData["data"]["Media"]["volumes"]
+
+                    if volumes == None:
+                        volumes = "n/a"
+
+                    embed.add_field(name="Volumes", value=volumes, inline=True)
+
+                    # -- Genres Field --
+
+                    genres = mangaData["data"]["Media"]["genres"]
+
+                    if not genres:
+                        genres = "n/a"
+                    else:
+                        genres = ', '.join(str(genre) for genre in mangaData["data"]["Media"]["genres"])  # Join list into single string
+                    
+                    embed.add_field(name="Genres", value=genres, inline=True)
+
+
+                    await ctx.send(embed=embed)
+
+                elif request.status == 404:
+                    await ctx.send("Invalid search. I couldn't find anything that matched the search query!")
+
+                else:
+                    await ctx.send("Command failed. Please try again later.")
 
 async def setup(bot):
     await bot.add_cog(Anime(bot))
