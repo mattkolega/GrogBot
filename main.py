@@ -10,7 +10,6 @@ discord.utils.setup_logging()
 
 load_dotenv()
 TOKEN = environ["BOT_TOKEN"]
-PLAYLIST = environ["PLAYLIST_URL"]
 
 description = "GrogBot. Built using discord.py"
 intents = discord.Intents.all()
@@ -38,11 +37,6 @@ async def on_ready():
 async def hello(ctx):
     """Responds to the user"""
     await ctx.send("G'day!")
-
-@bot.command()
-async def grogsongs(ctx):
-    """Sends playlist link containing party songs"""
-    await ctx.send(PLAYLIST)
 
 async def main():
     async with bot:
