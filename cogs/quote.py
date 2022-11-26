@@ -16,7 +16,12 @@ class Quote(commands.Cog):
     @commands.command()
     async def randomquote(self, ctx):
         """Grabs a random quote from the quotes channel"""
-        channel = discord.utils.get(self.bot.get_all_channels(), name="quotes")
+        channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
+
+        if not channel:
+            await ctx.send("Command failed. Quotes channel doesn't exist!")
+            return
+
         messages = [message async for message in channel.history(limit=500)]
         
         randomQuote = random.choice(messages)
@@ -34,7 +39,12 @@ class Quote(commands.Cog):
     @commands.command()
     async def quoteofthemonth(self, ctx):
         """Displays the quote with the highest reaction count from the previous month"""
-        channel = discord.utils.get(self.bot.get_all_channels(), name="quotes")
+        channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
+
+        if not channel:
+            await ctx.send("Command failed. Quotes channel doesn't exist!")
+            return
+
         messages = []
 
         todayutc = datetime.datetime.now()
