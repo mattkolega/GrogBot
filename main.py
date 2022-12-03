@@ -20,6 +20,7 @@ bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get o
 initialExtensions = [
     "cogs.anime",
     "cogs.fun",
+    "cogs.minecraft",
     "cogs.music",
     "cogs.quote",
 ]
