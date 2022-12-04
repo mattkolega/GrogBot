@@ -1,20 +1,29 @@
-import discord
-from discord.ext import commands
-
-from dotenv import load_dotenv
+import asyncio
 from os import environ
 
-import asyncio
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
 
-discord.utils.setup_logging()
+discord.utils.setup_logging()  # Enables bot logging in console
 
 load_dotenv()
 TOKEN = environ["BOT_TOKEN"]
 
-description = "GrogBot. Built using discord.py"
-intents = discord.Intents.all()
+description = """
+   ______                 ____        __ 
+  / ____/________  ____ _/ __ )____  / /_
+ / / __/ ___/ __ \/ __ `/ __  / __ \/ __/
+/ /_/ / /  / /_/ / /_/ / /_/ / /_/ / /_  
+\____/_/   \____/\__, /_____/\____/\__/  
+                /____/                   
 
-bot = commands.Bot(command_prefix="$", description=description, intents=intents)
+Built using discord.py
+"""
+intents = discord.Intents.all()
+helpCommand = commands.DefaultHelpCommand(no_category="Misc")
+
+bot = commands.Bot(command_prefix="$", description=description, intents=intents, help_command=helpCommand)
 bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get on the Beers")
 
 initialExtensions = [
