@@ -69,10 +69,10 @@ class Quote(commands.Cog):
             if message == quoteofthemonth[0]:
                 # Skip to the next item in the messages list to avoid duplicate copy of the first message
                 continue
-            if self.getTotalReactionCount(message) > self.getTotalReactionCount(quoteofthemonth[0]):
+            if await self.getTotalVoteCount(message) > await self.getTotalVoteCount(quoteofthemonth[0]):
                 quoteofthemonth.clear()
                 quoteofthemonth.append(message)
-            elif self.getTotalReactionCount(message) == self.getTotalReactionCount(quoteofthemonth[0]):
+            elif await self.getTotalVoteCount(message) == await self.getTotalVoteCount(quoteofthemonth[0]):
                 quoteofthemonth.append(message)
         
         if len(quoteofthemonth) > 1:
@@ -88,16 +88,61 @@ class Quote(commands.Cog):
                 embed.set_image(url=quote.attachments[0].url)
 
             await ctx.send(embed=embed)
+    
+    @commands.command()
+    async def previousquoteofthemonth(self, ctx, date):
+        """Grabs quotes of the month from past months"""
+        dateList = date.split("-")
+        month = int(dateList[0])
+        year = int(dateList[1])
 
-    def getTotalReactionCount(self, message: discord.Message) -> int:
-        """Calculates the total number of reactions for a message"""
-        messageReactions = message.reactions
-        totalReactionCount = 0
+        channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
+
+        if not channel:
+            await ctx.send("Command failed. Quotes channel doesn't exist!")
+            return
+
+        collection = self.bot.databaseClient["GrogBot"]["quoteOfTheMonth"]
+
+        numberOfQuotes = await collection.count_documents({"date": {"month": month, "year": year}})
+
+        if numberOfQuotes > 1:
+            await ctx.send("There were multiple Quotes of the Month!")
+        elif numberOfQuotes == 0:
+            await ctx.send("No quotes were found for the given month and year.")
+            return
+
+        cursor = collection.find({"date": {"month": month, "year": year}})
+
+        for document in await cursor.to_list(length=30):
+            message = await channel.fetch_message(document["messageID"])
+
+            if not message:
+                await ctx.send(f"Could not find message with ID: {document['messageID']}")
+                continue
+
+            embed = discord.Embed(title="Quote of the Month")
+            embed.description = message.content
+            embed.url = message.jump_url
+            embed.timestamp = message.created_at
+
+            if len(message.attachments) > 0:
+                embed.set_image(url=message.attachments[0].url)
+
+            await ctx.send(embed=embed)
+        
+    async def getVoteCount(self, message: discord.Message) -> int:
+        """Calculates the total number of votes for a message"""
+        messageReactions = [reaction async for reaction in message.reactions]
+        userList = []
 
         for reaction in messageReactions:
-            totalReactionCount += reaction.count
+            users = [user async for user in reaction.users()]
+            for user in users:
+                if user not in userList:
+                    userList.append(user)
         
-        return totalReactionCount
+        return len(userList)
 
 async def setup(bot):
     await bot.add_cog(Quote(bot))

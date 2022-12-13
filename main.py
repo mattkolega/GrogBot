@@ -2,6 +2,7 @@ import asyncio
 from os import environ
 
 import discord
+import motor.motor_asyncio
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -9,6 +10,7 @@ discord.utils.setup_logging()  # Enables bot logging in console
 
 load_dotenv()
 TOKEN = environ["BOT_TOKEN"]
+CONNECTION_STRING = environ["MONGODB_CONNECTION_STRING"]
 
 description = """
    ______                
@@ -27,8 +29,14 @@ Built using discord.py
 intents = discord.Intents.all()
 helpCommand = commands.DefaultHelpCommand(no_category="Misc")
 
-bot = commands.Bot(command_prefix="$", description=description, intents=intents, help_command=helpCommand)
-bot.activity = discord.Activity(type=discord.ActivityType.listening, name="Get on the Beers")
+class GrogBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="$", description=description, intents=intents, help_command=helpCommand)
+        self.activity = discord.Activity(type=discord.ActivityType.listening, name="Get on the Beers")
+
+        self.databaseClient = motor.motor_asyncio.AsyncIOMotorClient(CONNECTION_STRING, serverSelectionTimeoutMS=30000)
+
+bot = GrogBot()
 
 initialExtensions = [
     "cogs.anime",
