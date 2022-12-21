@@ -13,8 +13,7 @@ class Minecraft(commands.Cog):
     async def on_ready(self):
         print("Minecraft cog has successfully loaded")
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def cog_command_error(self, ctx, error):
         if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
             await ctx.send("Command failed! Minecraft username is required as a command argument.")
 
