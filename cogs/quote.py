@@ -14,6 +14,10 @@ class Quote(commands.Cog):
     async def on_ready(self):
         print("Quote cog has successfully loaded")
 
+    async def cog_command_error(self, ctx, error):
+        if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
+            await ctx.send("Command failed! Month and year is required as a command argument.")
+
     @commands.command()
     async def randomquote(self, ctx: commands.Context):
         """Grabs a random quote from the quotes channel"""
