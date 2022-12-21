@@ -1,12 +1,13 @@
+import datetime
+import random
+import traceback
+from zoneinfo import ZoneInfo
+
 import discord
 from discord.ext import commands
 
-import datetime
-import random
-from zoneinfo import ZoneInfo
-
 class Quote(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.Cog.listener()
@@ -14,7 +15,7 @@ class Quote(commands.Cog):
         print("Quote cog has successfully loaded")
 
     @commands.command()
-    async def randomquote(self, ctx):
+    async def randomquote(self, ctx: commands.Context):
         """Grabs a random quote from the quotes channel"""
         channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
 
@@ -23,74 +24,76 @@ class Quote(commands.Cog):
             return
 
         messages = [message async for message in channel.history(limit=500)]
-        
+
+        if not messages:
+            await ctx.send("Command failed. Could not find a quote!")
+            return
+
         randomQuote = random.choice(messages)
 
-        embed = discord.Embed(title="Random Quote")
-        embed.description = randomQuote.content
-        embed.url = randomQuote.jump_url
-        embed.timestamp = randomQuote.created_at
-
-        if len(randomQuote.attachments) > 0:
-                embed.set_image(url=randomQuote.attachments[0].url)
-
+        embed = await self.createEmbed(randomQuote)
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def quoteofthemonth(self, ctx):
+    async def quoteofthemonth(self, ctx: commands.Context):
         """Displays the quote with the highest reaction count from the previous month"""
         channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
 
         if not channel:
-            await ctx.send("Command failed. Quotes channel doesn't exist!")
+            await ctx.send("Command failed! Quotes channel doesn't exist.")
             return
 
-        messages = []
-
-        todayutc = datetime.datetime.now()
         localtz = ZoneInfo("Australia/Sydney")
-        todaylocal = todayutc.astimezone(localtz) # Convert current UTC time to local time
+        currentTime = datetime.datetime.now(tz=localtz)
 
-        beforeDate = datetime.datetime(2022, todaylocal.month, 1, hour=0, minute=0, second=0)
-        afterDate = datetime.datetime(2022, todaylocal.month-1, 1, hour=0, minute=0, second=0)
+        previousMonth = currentTime.month
+        year = currentTime.year
 
-        async for message in channel.history(before=beforeDate, after=afterDate):
-            if len(message.reactions) > 0: # Only get messages with reactions
-                messages.append(message)
+        # Ensure that month doesn't go outside of 1-12 limit
+        if (previousMonth - 1) < 1:
+            previousMonth = 12
+            year -= 1
+        else:
+            previousMonth -= 1
 
-        if len(messages) == 0:
-            await ctx.send("I couldn't find a quote of the month")
-            return
+        collection = self.bot.databaseClient["GrogBot"]["quoteOfTheMonth"]
 
-        quoteofthemonth = []
-        quoteofthemonth.append(messages[0])
+        numberOfQuotes = await collection.count_documents({"date": {"month": previousMonth, "year": year}})
 
-        for message in messages:
-            if message == quoteofthemonth[0]:
-                # Skip to the next item in the messages list to avoid duplicate copy of the first message
-                continue
-            if await self.getTotalVoteCount(message) > await self.getTotalVoteCount(quoteofthemonth[0]):
-                quoteofthemonth.clear()
-                quoteofthemonth.append(message)
-            elif await self.getTotalVoteCount(message) == await self.getTotalVoteCount(quoteofthemonth[0]):
-                quoteofthemonth.append(message)
-        
-        if len(quoteofthemonth) > 1:
-            await ctx.send("There are multiple Quotes of the Month!")
+        if numberOfQuotes > 0:
+            if numberOfQuotes > 1:
+                await ctx.send("There were multiple Quotes of the Month!")
+            
+            cursor = collection.find({"date": {"month": previousMonth, "year": year}})
 
-        for quote in quoteofthemonth:
-            embed = discord.Embed(title="Quote of the Month")
-            embed.description = quote.content
-            embed.url = quote.jump_url
-            embed.timestamp = quote.created_at
+            for document in await cursor.to_list(length=30):
+                message = await channel.fetch_message(document["messageID"])
 
-            if len(quote.attachments) > 0:
-                embed.set_image(url=quote.attachments[0].url)
+                if not message:
+                    await ctx.send(f"Could not find message with ID: {document['messageID']}")
+                    continue
 
-            await ctx.send(embed=embed)
+                embed = await self.createEmbed(message)
+                await ctx.send(embed=embed)
+
+        elif numberOfQuotes == 0:
+            quoteOfTheMonth = await self.getQuotesFromChannel(channel, previousMonth, year)
+
+            if not quoteOfTheMonth:
+                await ctx.send("Command failed! No quotes were found for previous month.")
+                return
+
+            for quote in quoteOfTheMonth:
+                document = {"messageID": f"{quote.id}",
+                            "date": {"month": previousMonth, "year": year}}
+
+                await collection.insert_one(document)
+                
+                embed = await self.createEmbed(quote)
+                await ctx.send(embed=embed)
     
     @commands.command()
-    async def previousquoteofthemonth(self, ctx, date):
+    async def previousquoteofthemonth(self, ctx: commands.Context, date: str):
         """Grabs quotes of the month from past months"""
         dateList = date.split("-")
         month = int(dateList[0])
@@ -106,43 +109,110 @@ class Quote(commands.Cog):
 
         numberOfQuotes = await collection.count_documents({"date": {"month": month, "year": year}})
 
-        if numberOfQuotes > 1:
-            await ctx.send("There were multiple Quotes of the Month!")
+        if numberOfQuotes > 0:
+            if numberOfQuotes > 1:
+                await ctx.send("There were multiple Quotes of the Month!")
+            
+            cursor = collection.find({"date": {"month": month, "year": year}})
+
+            for document in await cursor.to_list(length=30):
+                message = await channel.fetch_message(document["messageID"])
+
+                if not message:
+                    await ctx.send(f"Could not find message with ID: {document['messageID']}")
+                    continue
+
+                embed = await self.createEmbed(message)
+                await ctx.send(embed=embed)
+
         elif numberOfQuotes == 0:
-            await ctx.send("No quotes were found for the given month and year.")
-            return
+            quoteOfTheMonth = await self.getQuotesFromChannel(channel, month, year)
 
-        cursor = collection.find({"date": {"month": month, "year": year}})
+            if not quoteOfTheMonth:
+                await ctx.send("Command failed. No quotes were found for the given month!")
+                return
 
-        for document in await cursor.to_list(length=30):
-            message = await channel.fetch_message(document["messageID"])
+            for quote in quoteOfTheMonth:
+                document = {"messageID": f"{quote.id}",
+                            "date": {"month": month, "year": year}}
 
-            if not message:
-                await ctx.send(f"Could not find message with ID: {document['messageID']}")
-                continue
+                await collection.insert_one(document)
+                
+                embed = await self.createEmbed(quote)
+                await ctx.send(embed=embed)
 
-            embed = discord.Embed(title="Quote of the Month")
-            embed.description = message.content
-            embed.url = message.jump_url
-            embed.timestamp = message.created_at
+    async def getQuotesFromChannel(self, channel: discord.TextChannel, month: int, year: int) -> list[discord.Message]:
+        """Grabs quote of the month from quotes channel"""
+        beforeDateMonth = month
+        beforeDateYear = year
 
-            if len(message.attachments) > 0:
-                embed.set_image(url=message.attachments[0].url)
+        if (beforeDateMonth + 1) > 12:  # Ensure that month doesn't go outside of 1-12 limit
+            beforeDateMonth = 1
+            beforeDateYear += 1
+        else:
+            beforeDateMonth += 1
 
-            await ctx.send(embed=embed)
+        afterDateMonth = month
+        afterDateYear = year
+
+        localtz = ZoneInfo("Australia/Sydney")
+
+        beforeDate = datetime.datetime(beforeDateYear, beforeDateMonth, 1, hour=0, minute=0, second=0, tzinfo=localtz)
+        afterDate = datetime.datetime(afterDateYear, afterDateMonth, 1, hour=0, minute=0, second=0, tzinfo=localtz)
+
+        quotes = [message async for message in channel.history(before=beforeDate, after=afterDate) if len(message.reactions) > 0]  # Only get quotes with reactions
+
+        quoteOfTheMonth = []
+
+        if len(quotes) == 0:
+            quotes = [message async for message in channel.history(before=beforeDate, after=afterDate)]  # Get all quotes within the single month
+
+            if not quotes:
+                return quotes
+            
+            quoteOfTheMonth.append(random.choice(quotes))  # Randomly pick a quote from the quotes channel if there are no quotes containing reactions
         
+        elif len(quotes) > 0:
+            quoteOfTheMonth.append(quotes[0])
+
+            for quote in quotes:
+                if quote == quoteOfTheMonth[0]:
+                    # Skip to the next item in the quoteOfTheMonth list to avoid duplicate copy of the first quote
+                    continue
+                if await self.getVoteCount(quote) > await self.getVoteCount(quoteOfTheMonth[0]):
+                    quoteOfTheMonth.clear()
+                    quoteOfTheMonth.append(quote)
+                elif await self.getVoteCount(quote) == await self.getVoteCount(quoteOfTheMonth[0]):
+                    quoteOfTheMonth.append(quote)
+        
+        return quoteOfTheMonth
+     
     async def getVoteCount(self, message: discord.Message) -> int:
-        """Calculates the total number of votes for a message"""
-        messageReactions = [reaction async for reaction in message.reactions]
+        """Calculates the total number of votes for a quote"""
         userList = []
 
-        for reaction in messageReactions:
+        for reaction in message.reactions:
             users = [user async for user in reaction.users()]
-            for user in users:
-                if user not in userList:
-                    userList.append(user)
+            userList.extend([user for user in users if user not in userList])  # Add reaction user to userList if not already in userList
         
-        return len(userList)
+        return len(userList)  # Calculate length of userList to get total number of votes for a quote
+    
+    async def createEmbed(self, message: discord.Message) -> discord.Embed:
+        """Creates a Quote embed based on a message"""
+        embed = discord.Embed(
+            title="Quote of the Month",
+            description=message.content,
+            url=message.jump_url,
+            timestamp=message.created_at
+        )
 
-async def setup(bot):
+        if len(message.attachments) > 0:
+            if "image" in message.attachments[0].content_type:
+                embed.set_image(url=message.attachments[0].url)
+            elif "video" in message.attachments[0].content_type:
+                embed.set_footer(text="Quote contains video which can't be displayed in embed.")
+
+        return embed
+
+async def setup(bot: commands.Bot):
     await bot.add_cog(Quote(bot))
