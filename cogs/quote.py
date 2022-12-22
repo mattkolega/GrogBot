@@ -107,6 +107,13 @@ class Quote(commands.Cog):
         month = int(dateList[0])
         year = int(dateList[1])
 
+        localtz = ZoneInfo("Australia/Sydney")
+        currentTime = datetime.datetime.now(tz=localtz)
+
+        if month == currentTime.month:  # Prevent user from using current month as argument
+            await ctx.send("Command failed! Please wait until next month to get the quote of the current month.")
+            return
+
         channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
 
         if not channel:
