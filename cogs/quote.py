@@ -1,6 +1,6 @@
 import datetime
 import random
-import traceback
+import re
 from zoneinfo import ZoneInfo
 
 import discord
@@ -99,6 +99,10 @@ class Quote(commands.Cog):
     @commands.command()
     async def previousquoteofthemonth(self, ctx: commands.Context, date: str):
         """Grabs quotes of the month from past months"""
+        if not await self.argumentIsValid(date):
+            await ctx.send("Command failed! Invalid argument. Please ensure that the argument is a valid date formatted as 'MM-YYYY'.")
+            return
+
         dateList = date.split("-")
         month = int(dateList[0])
         year = int(dateList[1])
@@ -144,6 +148,25 @@ class Quote(commands.Cog):
                 
                 embed = await self.createEmbed(quote)
                 await ctx.send(embed=embed)
+
+    async def argumentIsValid(self, argument: str) -> bool:
+        """Check if command argument is valid"""
+        regexMatch = re.match("^[0-1][0-9]-[0-9]{4}$", argument)  # Ensure that argument's format is MM-YYYY
+
+        if not regexMatch:
+            return False
+        
+        argumentList = argument.split("-")  # Split full date into month and year
+        month = int(argumentList[0])
+        year = int(argumentList[1])
+
+        if not 1 <= month <= 12:
+            return False
+        
+        if not 1 <= year <= 9999:
+            return False
+
+        return True
 
     async def getQuotesFromChannel(self, channel: discord.TextChannel, month: int, year: int) -> list[discord.Message]:
         """Grabs quote of the month from quotes channel"""
