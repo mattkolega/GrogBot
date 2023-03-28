@@ -17,9 +17,11 @@ class Quote(commands.Cog):
     async def cog_command_error(self, ctx, error):
         if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
             await ctx.send("Command failed! Month and year is required as a command argument.")
+        else:
+            print(error)
 
-    @commands.command()
-    async def randomquote(self, ctx: commands.Context):
+    @commands.command(name="randomquote")
+    async def randomQuote(self, ctx: commands.Context):
         """Grabs a random quote from the quotes channel"""
         channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
 
@@ -35,18 +37,16 @@ class Quote(commands.Cog):
 
         randomQuote = random.choice(messages)
 
-        embed = await self.createEmbed(randomQuote)
+        embed = await self.createEmbed("Random Quote", randomQuote)
         await ctx.send(embed=embed)
 
-    @commands.command()
-    async def quoteofthemonth(self, ctx: commands.Context):
+    @commands.command(name="quoteofthemonth")
+    async def quoteOfTheMonth(self, ctx: commands.Context):
+        """Manually call quoteOfTheMonth"""
+        await self.quoteOfTheCurrentMonth(ctx)
+
+    async def quoteOfTheCurrentMonth(self, ctx: commands.Context):
         """Displays the quote with the highest reaction count from the previous month"""
-        channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
-
-        if not channel:
-            await ctx.send("Command failed! Quotes channel doesn't exist.")
-            return
-
         localtz = ZoneInfo("Australia/Sydney")
         currentTime = datetime.datetime.now(tz=localtz)
 
@@ -60,44 +60,10 @@ class Quote(commands.Cog):
         else:
             previousMonth -= 1
 
-        collection = self.bot.databaseClient["GrogBot"]["quoteOfTheMonth"]
+        await self.findQuoteOfTheMonth(ctx, previousMonth, year)
 
-        numberOfQuotes = await collection.count_documents({"date": {"month": previousMonth, "year": year}})
-
-        if numberOfQuotes > 0:
-            if numberOfQuotes > 1:
-                await ctx.send("There were multiple Quotes of the Month!")
-            
-            cursor = collection.find({"date": {"month": previousMonth, "year": year}})
-
-            for document in await cursor.to_list(length=30):
-                message = await channel.fetch_message(document["messageID"])
-
-                if not message:
-                    await ctx.send(f"Could not find message with ID: {document['messageID']}")
-                    continue
-
-                embed = await self.createEmbed(message)
-                await ctx.send(embed=embed)
-
-        elif numberOfQuotes == 0:
-            quoteOfTheMonth = await self.getQuotesFromChannel(channel, previousMonth, year)
-
-            if not quoteOfTheMonth:
-                await ctx.send("Command failed! No quotes were found for previous month.")
-                return
-
-            for quote in quoteOfTheMonth:
-                document = {"messageID": f"{quote.id}",
-                            "date": {"month": previousMonth, "year": year}}
-
-                await collection.insert_one(document)
-                
-                embed = await self.createEmbed(quote)
-                await ctx.send(embed=embed)
-    
-    @commands.command()
-    async def previousquoteofthemonth(self, ctx: commands.Context, date: str):
+    @commands.command(name="previousquoteofthemonth")
+    async def previousQuoteOfTheMonth(self, ctx: commands.Context, date: str):
         """Grabs quotes of the month from past months"""
         if not await self.argumentIsValid(date):
             await ctx.send("Command failed! Invalid argument. Please ensure that the argument is a valid date formatted as 'MM-YYYY'.")
@@ -113,7 +79,30 @@ class Quote(commands.Cog):
         if month == currentTime.month:  # Prevent user from using current month as argument
             await ctx.send("Command failed! Please wait until next month to get the quote of the current month.")
             return
+        
+        await self.findQuoteOfTheMonth(ctx, month, year)
 
+    async def argumentIsValid(self, argument: str) -> bool:
+        """Check if command argument is valid"""
+        regexMatch = re.match("^[0-1][0-9]-[0-9]{4}$", argument)  # Ensure that argument's format is MM-YYYY
+
+        if not regexMatch:
+            return False
+        
+        argumentList = argument.split("-")  # Split full date into month and year
+        month = int(argumentList[0])
+        year = int(argumentList[1])
+
+        if not 1 <= month <= 12:
+            return False
+        
+        if not 1 <= year <= 9999:
+            return False
+
+        return True
+    
+    async def findQuoteOfTheMonth(self, ctx: commands.Context, month: int, year: int):
+        """Look for quote in database or quotes channel"""
         channel = discord.utils.get(ctx.guild.text_channels, name="quotes")
 
         if not channel:
@@ -137,7 +126,7 @@ class Quote(commands.Cog):
                     await ctx.send(f"Could not find message with ID: {document['messageID']}")
                     continue
 
-                embed = await self.createEmbed(message)
+                embed = await self.createEmbed("Quote Of The Month", message)
                 await ctx.send(embed=embed)
 
         elif numberOfQuotes == 0:
@@ -153,27 +142,8 @@ class Quote(commands.Cog):
 
                 await collection.insert_one(document)
                 
-                embed = await self.createEmbed(quote)
+                embed = await self.createEmbed("Quote Of The Month", quote)
                 await ctx.send(embed=embed)
-
-    async def argumentIsValid(self, argument: str) -> bool:
-        """Check if command argument is valid"""
-        regexMatch = re.match("^[0-1][0-9]-[0-9]{4}$", argument)  # Ensure that argument's format is MM-YYYY
-
-        if not regexMatch:
-            return False
-        
-        argumentList = argument.split("-")  # Split full date into month and year
-        month = int(argumentList[0])
-        year = int(argumentList[1])
-
-        if not 1 <= month <= 12:
-            return False
-        
-        if not 1 <= year <= 9999:
-            return False
-
-        return True
 
     async def getQuotesFromChannel(self, channel: discord.TextChannel, month: int, year: int) -> list[discord.Message]:
         """Grabs quote of the month from quotes channel"""
@@ -231,10 +201,10 @@ class Quote(commands.Cog):
         
         return len(userList)  # Calculate length of userList to get total number of votes for a quote
     
-    async def createEmbed(self, message: discord.Message) -> discord.Embed:
+    async def createEmbed(self, title: str, message: discord.Message) -> discord.Embed:
         """Creates a Quote embed based on a message"""
         embed = discord.Embed(
-            title="Quote of the Month",
+            title=title,
             description=message.content,
             url=message.jump_url,
             timestamp=message.created_at
